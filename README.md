@@ -982,4 +982,3 @@ curl http://localhost:8001/tools/available
 # 3. Verify tool imports in openai_tools.py
 ```
 
-**Built with ❤️ by [Shayan Rastgou](https://github.com/ShayanRas)**
