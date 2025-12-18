@@ -1,0 +1,84 @@
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: openai_agentsdk_postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - openai_agentsdk_network
+
+  agent_app:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: openai_agentsdk_agent_app
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - DB_URL=${DB_URL}
+      - VECTOR_STORE_ID=${VECTOR_STORE_ID}
+    volumes:
+      - ./api_history_threads:/app/api_history_threads
+      - ./text_history_threads:/app/text_history_threads
+      - ./src/api_main.py:/app/api_main.py  # For live reload
+      - ./src/instructions.py:/app/instructions.py # For live reload
+      - ./src/database.py:/app/database.py # For live reload
+      - ./src/openai_tools.py:/app/openai_tools.py # For live reload
+    depends_on:
+      - postgres
+      - mcp_server
+    networks:
+      - openai_agentsdk_network
+
+  mcp_server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: openai_agentsdk_mcp_server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src/test_mcp_server.py:/app/test_mcp_server.py # For live reload (if server supports it)
+    networks:
+      - openai_agentsdk_network
+
+  chainlit_ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.chainlit
+    container_name: openai_agentsdk_chainlit_ui
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+    environment:
+      - API_BASE_URL=http://agent_app:8001
+      - DEFAULT_HISTORY_MODE=${DEFAULT_HISTORY_MODE}
+      - CHAINLIT_AUTH_SECRET=${CHAINLIT_AUTH_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+    volumes:
+      - ./src/chainlit_app.py:/app/chainlit_app.py  # For live reload
+      - ./.chainlit:/app/.chainlit  # For config
+    depends_on:
+      - postgres
+      - agent_app
+    networks:
+      - openai_agentsdk_network
+
+networks:
+  openai_agentsdk_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+agents
+fastmcp
+tensorflow==1.15.5
+asyncpg==0.29.0
